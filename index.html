@@ -186,6 +186,7 @@
   <a class="floating-wa" href="https://wa.me/18298761874?text=Hola%20DPS%20SERVICE,%20quisiera%20cotizar%20un%20servicio%20para%20mi%20evento" target="_blank" rel="noopener noreferrer" aria-label="Cotizar por WhatsApp con DPS SERVICE"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 11.8a8.4 8.4 0 0 1-12.4 7.4L4 20l.9-4A8.4 8.4 0 1 1 20.5 11.8ZM12 5.1a6.7 6.7 0 0 0-5.7 10.2l.2.3-.5 2.1 2.2-.5.3.2A6.7 6.7 0 1 0 12 5.1Zm-2 3.1c.2 0 .3 0 .5.4l.6 1.4c.1.2.1.4-.1.6l-.4.5c-.1.1-.2.3-.1.4.2.4.8 1.2 1.6 1.7.8.5 1.3.7 1.6.8.2.1.4 0 .5-.1l.7-.8c.2-.2.3-.2.5-.1l1.4.7c.2.1.3.2.3.3 0 .2-.1 1-.7 1.4-.5.4-1.1.6-1.8.5-.6-.1-1.4-.3-2.4-.8-1.4-.6-2.4-1.7-3.1-2.7-.7-1-.9-1.7-.9-2.4 0-.7.3-1.3.6-1.6.3-.3.7-.4 1.2-.4Z"/></svg></a>
 
   <div class="lightbox" role="dialog" aria-modal="true" aria-label="Galería ampliada" aria-hidden="true"><button class="lightbox-close" type="button" aria-label="Cerrar imagen">×</button><button class="lightbox-prev" type="button" aria-label="Imagen anterior">‹</button><figure><img src="" alt=""><figcaption></figcaption></figure><button class="lightbox-next" type="button" aria-label="Imagen siguiente">›</button></div>
+  <script src="assets/faq-dps.js"></script>
   <script>
     // La ilustración del favicon se comparte con las imágenes de marca de la página.
     const dpsMascot = document.querySelector("#site-favicon").href;
@@ -194,6 +195,7 @@
     // Conexión con el agente mediante un endpoint propio. Nunca pongas aquí una clave de OpenAI.
     // Si el Worker vive en otro dominio, cambia este valor por su URL y configura ALLOWED_ORIGIN.
     const DPS_ASSISTANT_ENDPOINT = "/api/dps-assistant";
+    const DPS_ASSISTANT_FAQ = Array.isArray(window.DPS_FAQ_DATA) ? window.DPS_FAQ_DATA : [];
     const assistantLaunch = document.querySelector("#assistant-launch");
     const assistantPanel = document.querySelector("#assistant-panel");
     const assistantClose = document.querySelector("#assistant-close");
@@ -218,6 +220,25 @@
       assistantLog.scrollTop = assistantLog.scrollHeight;
       return message;
     }
+    function normalizeDpsQuestion(value) {
+      return String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    }
+    function findDpsFaqAnswer(question) {
+      const normalized = normalizeDpsQuestion(question);
+      let best = null; let bestLength = 0;
+      for (const item of DPS_ASSISTANT_FAQ) {
+        for (const trigger of item.triggers || []) {
+          const phrase = normalizeDpsQuestion(trigger);
+          if (phrase && phrase.length > bestLength && normalized.includes(phrase)) { best = item; bestLength = phrase.length; }
+        }
+      }
+      return best ? best.answer : null;
+    }
+    function buildDpsAssistantContext() {
+      const approvedAnswers = DPS_ASSISTANT_FAQ.map(item => "- " + item.question + " " + item.answer).join("\\n");
+      return "Eres el asistente virtual de DPS SERVICE y respondes en español. Usa primero esta información aprobada. No inventes precios, disponibilidad, cargos, inclusiones ni condiciones; una cotización no confirma una reserva. Si un dato no está definido, dilo con claridad y deriva al cliente al WhatsApp 829-876-1874.\n\n" + approvedAnswers;
+    }
+
     async function askAssistant(question) {
       const cleanQuestion = question.trim();
       if (!cleanQuestion || assistantBusy) return;
@@ -228,9 +249,16 @@
       assistantInput.value = "";
       const pending = addAssistantMessage("Un momento, estoy revisando…","bot","pending");
       try {
+        const localAnswer = findDpsFaqAnswer(cleanQuestion);
+        if (localAnswer) {
+          pending.remove();
+          assistantHistory.push({role:"assistant",content:localAnswer});
+          addAssistantMessage(localAnswer,"bot");
+          return;
+        }
         const response = await fetch(DPS_ASSISTANT_ENDPOINT, {
           method:"POST", headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({messages:assistantHistory.slice(-10)})
+          body:JSON.stringify({messages:[{role:"system",content:buildDpsAssistantContext()},...assistantHistory.slice(-10)]})
         });
         const result = await response.json();
         if (!response.ok || typeof result.answer !== "string") throw new Error("assistant_unavailable");
