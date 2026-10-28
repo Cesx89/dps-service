@@ -221,7 +221,7 @@
       return message;
     }
     function normalizeDpsQuestion(value) {
-      return String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     }
     function findDpsFaqAnswer(question) {
       const normalized = normalizeDpsQuestion(question);
@@ -235,7 +235,7 @@
       return best ? best.answer : null;
     }
     function buildDpsAssistantContext() {
-      const approvedAnswers = DPS_ASSISTANT_FAQ.map(item => "- " + item.question + " " + item.answer).join("\\n");
+      const approvedAnswers = DPS_ASSISTANT_FAQ.map(item => "- " + item.question + " " + item.answer).join("\n");
       return "Eres el asistente virtual de DPS SERVICE y respondes en español. Usa primero esta información aprobada. No inventes precios, disponibilidad, cargos, inclusiones ni condiciones; una cotización no confirma una reserva. Si un dato no está definido, dilo con claridad y deriva al cliente al WhatsApp 829-876-1874.\n\n" + approvedAnswers;
     }
 
