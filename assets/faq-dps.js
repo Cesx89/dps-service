@@ -264,13 +264,13 @@ window.DPS_FAQ_DATA = [
     ]
   },
   {
-    "question": "¿Qué datos no debo compartir en el chat?",
+    "question": "¿Qué información personal debo evitar compartir?",
     "answer": "Comparte solo los datos necesarios para consultar el servicio. No envíes contraseñas, números de tarjetas, claves bancarias ni otra información confidencial.",
     "triggers": [
-      "que datos no debo compartir",
-      "datos sensibles",
-      "compartir en el chat",
-      "contrasena",
+      "informacion personal",
+      "informacion confidencial",
+      "datos personales",
+      "no compartir contrasenas",
       "clave bancaria",
       "numero de tarjeta"
     ]
